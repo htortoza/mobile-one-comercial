@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mobile One POS — Carrito</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="app-screen">
+      <div class="topbar">
+        <button class="icon-btn" id="btn-volver" aria-label="Volver"></button>
+        <div class="topbar__titulos">
+          <div class="topbar__titulo">
+            <span id="titulo-carro"></span>
+            <span class="topbar__titulo-extra" id="tipo-documento"></span>
+          </div>
+          <div class="topbar__subtitulo" id="subtitulo-carro"></div>
+        </div>
+        <button class="icon-btn" id="btn-envio-rapido" aria-label="Enviar todo a despacho" style="display:none"></button>
+        <div class="menu-wrap">
+          <button class="icon-btn" aria-label="Mas opciones" id="btn-menu"></button>
+          <div class="dropdown-menu" id="dropdown-menu">
+            <button class="dropdown-menu__item" id="opt-cambiar-cliente">Cambiar cliente</button>
+            <button class="dropdown-menu__item" id="opt-cambiar-documento">Cambiar tipo de documento</button>
+            <button class="dropdown-menu__item dropdown-menu__item--danger" id="opt-eliminar-carro">Eliminar carro</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner-solo-lectura" id="banner-solo-lectura" style="display:none"></div>
+
+      <div class="contenido" id="lineas-carrito"></div>
+
+      <div class="acciones-fila" id="acciones-fila">
+        <button class="btn-outline" id="btn-buscar"><span id="icono-buscar"></span>Buscar</button>
+        <button class="btn-outline" id="btn-escanear"><span id="icono-escanear"></span>Escanear</button>
+      </div>
+
+      <div class="footer-total" id="footer-total">
+        <div class="footer-total__desglose" id="footer-desglose"></div>
+        <div class="footer-total__resumen">
+          <div>
+            <div class="footer-total__label">Total<span id="footer-items"></span><span class="link-promo" id="footer-promo-link" style="display:none"></span></div>
+            <div class="footer-total__monto" id="footer-total-monto">$0</div>
+          </div>
+          <button class="btn-cobrar" id="btn-cobrar">Cobrar</button>
+        </div>
+      </div>
+
+      <div class="sheet-overlay" id="sheet-overlay">
+        <div class="sheet" id="sheet"></div>
+      </div>
+
+      <div class="dialog-overlay" id="dialog-overlay">
+        <div class="dialog-box" id="dialog-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById("btn-volver").innerHTML = ICONS.back;
+    document.getElementById("btn-menu").innerHTML = ICONS.menu;
+    document.getElementById("btn-envio-rapido").innerHTML = ICONS.despacho;
+    document.getElementById("icono-buscar").outerHTML = ICONS.search;
+    document.getElementById("icono-escanear").outerHTML = ICONS.scan;
+  </script>
+</body>
+</html>

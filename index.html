@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mobile One POS — Carros activos</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="app-screen">
+      <div class="topbar">
+        <div class="topbar__titulos">
+          <div class="topbar__titulo">Carros activos</div>
+          <div class="topbar__subtitulo" id="titulo-tienda"></div>
+        </div>
+        <div class="menu-wrap">
+          <button class="icon-btn" id="btn-menu-lista" aria-label="Menu"></button>
+          <div class="dropdown-menu" id="dropdown-menu-lista">
+            <button class="dropdown-menu__item" id="opt-reiniciar-demo">Reiniciar datos de demo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="buscador">
+        <span id="icono-buscar"></span>
+        <input id="buscar-carro" type="text" placeholder="Buscar por cliente o número" />
+      </div>
+
+      <div class="contenido" id="lista-carros"></div>
+
+      <button class="fab" id="fab-nuevo-carro">
+        <span id="icono-fab"></span>
+        Nuevo carro
+      </button>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById("btn-menu-lista").innerHTML = ICONS.menu;
+    document.getElementById("icono-buscar").outerHTML = ICONS.search;
+    document.getElementById("icono-fab").outerHTML = ICONS.plus;
+  </script>
+</body>
+</html>
