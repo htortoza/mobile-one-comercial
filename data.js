@@ -3,15 +3,23 @@
 window.MOCK_DATA = {
   tienda: { nombre: "Tienda Providencia", vendedor: "Vendedor Demo" },
 
+  // `direcciones` en cada cliente = direcciones guardadas en su ficha (ver
+  // abrirSheetFichaCliente en app.js). Distinto de `direcciones` mas abajo
+  // (lista global) que usa el sheet de despacho del carrito — no se
+  // fusionaron a proposito, son dos cosas distintas: "direccion conocida del
+  // cliente" vs "a donde se manda ESTE producto".
   clientes: [
-    { rut: "11.111.111-1", nombre: "Maria Fernandez" },
-    { rut: "22.222.222-2", nombre: "Comercial Rios SpA" },
-    { rut: "33.333.333-3", nombre: "Pedro Soto" },
-    { rut: "44.444.444-4", nombre: "Javiera Munoz" },
+    { rut: "11.111.111-1", nombre: "Maria Fernandez",
+      direcciones: [{ id: "cd1", direccion: "Av. Providencia 1234, depto 56", comuna: "Providencia" }] },
+    { rut: "22.222.222-2", nombre: "Comercial Rios SpA",
+      direcciones: [{ id: "cd2", direccion: "Av. Apoquindo 3200, of. 12", comuna: "Las Condes" }] },
+    { rut: "33.333.333-3", nombre: "Pedro Soto", direcciones: [] },
+    { rut: "44.444.444-4", nombre: "Javiera Munoz", direcciones: [] },
     // Empresa con linea de credito propia (ver cobro.html) — el resto de
     // clientes/empresas no tiene campo `credito`, eso es lo que gatea si se
     // muestra el medio de pago "Credito" en el cobro.
-    { rut: "76.543.210-5", nombre: "Distribuidora Andina Ltda.", credito: 1350298 },
+    { rut: "76.543.210-5", nombre: "Distribuidora Andina Ltda.", credito: 1350298,
+      direcciones: [{ id: "cd3", direccion: "Camino La Farfana 890, bodega 4", comuna: "Maipu" }] },
   ],
 
   direcciones: [

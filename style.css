@@ -45,7 +45,13 @@ body {
   /* Fondo oscuro del ESCRITORIO — el contenido del telefono adentro mantiene el tema
      claro real de la app, esto solo enmarca la demo para el vendedor. */
   background: radial-gradient(circle at 50% 0%, #1b1b2e 0%, #0a0a12 60%);
+  /* 100vh incluye el area tapada por la barra del navegador movil cuando esta
+     desplegada — no coincide con el 100dvh de .phone-frame de abajo, y ese
+     desfase generaba un espacio vacio grande arriba (body mas alto que el
+     frame, centrado con flex). 100dvh como fallback-mejorado: navegadores
+     viejos sin soporte se quedan con el 100vh de arriba. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,7 +107,14 @@ body {
     box-shadow: none;
   }
   .phone-frame::before { display: none; }
-  .app-screen { border-radius: 0; padding-top: env(safe-area-inset-top, 0); }
+  /* padding-bottom reserva el area del home indicator (iOS) / barra de
+     gestos (Android) — sin esto el footer con el boton Cobrar/Confirmar
+     quedaba tapado por esa franja en varios telefonos. */
+  .app-screen {
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }
 
 /* ── Top bar (AppScaffold) ────────────────────────────────────────────── */
@@ -263,6 +276,41 @@ body {
 .fab svg { width: 20px; height: 20px; }
 .fab:active { background: var(--azul-primario-hover); }
 
+/* ── Selector de cliente (nuevo carro) y ficha de cliente ─────────────── */
+.cliente-row {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-s);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.cliente-row:last-child { border-bottom: none; }
+.cliente-row--seleccionable { cursor: pointer; }
+.cliente-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--azul-suave);
+  color: var(--azul-primario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.cliente-avatar svg { width: 20px; height: 20px; }
+.cliente-avatar--generico { background: var(--superficie-campo); color: var(--texto-secundario); cursor: default; }
+.cliente-avatar--grande { width: 56px; height: 56px; }
+.cliente-avatar--grande svg { width: 28px; height: 28px; }
+.cliente-row__info { flex: 1; min-width: 0; }
+.cliente-row__info--click { cursor: pointer; }
+.cliente-row__nombre { font-size: 14px; font-weight: 600; }
+.cliente-row__detalle { font-size: 12px; color: var(--texto-secundario); }
+.cliente-ficha__nombre { font-size: 17px; font-weight: 700; }
+.cliente-ficha__rut { font-size: 13px; color: var(--texto-secundario); }
+
 /* ── Estado vacio / error ─────────────────────────────────────────────── */
 .estado-vacio {
   flex: 1;
@@ -389,6 +437,7 @@ body {
 .tarjeta-linea__totales .label { font-size: 11px; color: var(--texto-secundario); margin-right: 3px; }
 .tarjeta-linea__subtotal { font-size: 15px; font-weight: 700; }
 .tarjeta-linea__subtotal--oferta { color: var(--azul-primario); }
+.tarjeta-linea__despacho-costo { font-size: 11px; color: var(--azul-primario); font-weight: 600; margin-top: 1px; }
 
 .tarjeta-linea__fila3 {
   display: flex;
@@ -674,6 +723,7 @@ body {
   font-size: 11px;
   color: var(--texto-secundario);
   margin-top: 1px;
+  white-space: nowrap;
 }
 .tarjeta-linea__envio .link-inline { margin-top: 1px; }
 

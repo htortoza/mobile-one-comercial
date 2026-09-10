@@ -168,6 +168,7 @@ const ICONS = {
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   checkCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  persona: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>',
 };
 
 // ── Colores de variante (swatch visual en el selector) ──────────────────
@@ -302,10 +303,187 @@ function initListaCarros() {
     });
   };
 
+  // ── Sheet generico de esta pantalla (nuevo carro / ficha cliente) ──────
+  const sheetOverlay = document.getElementById("sheet-overlay");
+  const sheetEl = document.getElementById("sheet");
+  function abrirSheet(html, wire) {
+    sheetEl.innerHTML = html;
+    sheetEl.querySelectorAll(".sheet__cerrar").forEach((b) => b.addEventListener("click", cerrarSheet));
+    sheetEl.querySelectorAll(".sheet__volver").forEach((b) => b.addEventListener("click", () => abrirSheetNuevoCarro()));
+    if (wire) wire(sheetEl);
+    sheetOverlay.classList.add("abierto");
+  }
+  function cerrarSheet() {
+    sheetOverlay.classList.remove("abierto");
+  }
+  sheetOverlay.addEventListener("click", (e) => { if (e.target === sheetOverlay) cerrarSheet(); });
+
+  function siguienteNumeroCarro() {
+    const max = DATA.carros.reduce((m, c) => {
+      const n = parseInt((c.numero || "").replace(/\D/g, ""), 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    return `BO-${String(max + 1).padStart(5, "0")}`;
+  }
+
+  // Crea un carro nuevo de verdad (id propio) en vez de reusar siempre el
+  // mismo carro "nuevo" — asi cada uno queda en la lista con su numero.
+  function crearCarroNuevo(cliente) {
+    const nuevo = {
+      id: `c-${Date.now()}`,
+      numero: siguienteNumeroCarro(),
+      cliente: cliente ? cliente.nombre : "Cliente generico",
+      clienteRut: cliente ? cliente.rut : null,
+      estado: "ABIERTO",
+      estadoLabel: "Abierto",
+      tipoDocumento: "Boleta",
+      datosFactura: null,
+      promocionCarritoAplicadaId: null,
+      lineas: [],
+    };
+    DATA.carros.push(nuevo);
+    guardarEstado();
+    window.location.href = `carrito.html?id=${nuevo.id}`;
+  }
+
+  // ── Sheet: elegir cliente para el carro nuevo ──────────────────────────
+  function abrirSheetNuevoCarro() {
+    abrirSheet(
+      `
+      <div class="sheet__handle"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="sheet__titulo">Nuevo carro</div>
+        <button class="icon-btn sheet__cerrar" aria-label="Cerrar">${ICONS.close}</button>
+      </div>
+      <div class="sheet__detalle">Selecciona el cliente para este carro.</div>
+      <div class="sheet__buscador">${ICONS.search}<input id="buscar-cliente-nuevo" type="text" placeholder="Nombre o RUT" /></div>
+      <div class="sheet__lista" id="lista-clientes-nuevo"></div>`,
+      (root) => {
+        const input = root.querySelector("#buscar-cliente-nuevo");
+        const lista = root.querySelector("#lista-clientes-nuevo");
+        const pintar = () => {
+          const query = (input.value || "").trim().toLowerCase();
+          let html = "";
+          if (!query || "cliente generico".includes(query)) {
+            html += `
+            <div class="cliente-row cliente-row--seleccionable" id="fila-cliente-generico">
+              <div class="cliente-avatar cliente-avatar--generico">${ICONS.persona}</div>
+              <div class="cliente-row__info">
+                <div class="cliente-row__nombre">Cliente generico</div>
+                <div class="cliente-row__detalle">Sin datos asociados</div>
+              </div>
+            </div>`;
+          }
+          html += DATA.clientes
+            .filter((c) => !query || c.nombre.toLowerCase().includes(query) || c.rut.toLowerCase().includes(query))
+            .map(
+              (c) => `
+            <div class="cliente-row">
+              <button class="cliente-avatar" data-accion="ficha-cliente" data-rut="${esc(c.rut)}" aria-label="Ver ficha de ${esc(c.nombre)}">${ICONS.persona}</button>
+              <div class="cliente-row__info cliente-row__info--click" data-accion="elegir-cliente" data-rut="${esc(c.rut)}">
+                <div class="cliente-row__nombre">${esc(c.nombre)}</div>
+                <div class="cliente-row__detalle">${esc(c.rut)}${c.credito ? " · Con credito" : ""}</div>
+              </div>
+            </div>`,
+            )
+            .join("");
+          lista.innerHTML = html || `<div class="sheet__item-detalle" style="padding:12px 0">Sin resultados para "${esc(query)}".</div>`;
+
+          lista.querySelector("#fila-cliente-generico")?.addEventListener("click", () => crearCarroNuevo(null));
+          lista.querySelectorAll('[data-accion="elegir-cliente"]').forEach((el) => {
+            el.addEventListener("click", () => crearCarroNuevo(DATA.clientes.find((c) => c.rut === el.dataset.rut)));
+          });
+          lista.querySelectorAll('[data-accion="ficha-cliente"]').forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              abrirSheetFichaCliente(DATA.clientes.find((c) => c.rut === btn.dataset.rut));
+            });
+          });
+        };
+        input.addEventListener("input", pintar);
+        pintar();
+      },
+    );
+  }
+
+  // ── Sheet: ficha de cliente (datos, credito, direcciones guardadas) ────
+  function abrirSheetFichaCliente(cliente) {
+    cliente.direcciones = cliente.direcciones || [];
+    abrirSheet(
+      `
+      <div class="sheet__handle"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <button class="icon-btn sheet__volver" aria-label="Volver">${ICONS.back}</button>
+        <div class="sheet__titulo">Ficha de cliente</div>
+        <button class="icon-btn sheet__cerrar" aria-label="Cerrar">${ICONS.close}</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin:8px 0 4px">
+        <div class="cliente-avatar cliente-avatar--grande cliente-avatar--generico" style="cursor:default">${ICONS.persona}</div>
+        <div>
+          <div class="cliente-ficha__nombre">${esc(cliente.nombre)}</div>
+          <div class="cliente-ficha__rut">${esc(cliente.rut)}</div>
+        </div>
+      </div>
+      ${cliente.credito ? `
+      <div class="banner-credito" style="margin-top:8px">
+        <span class="banner-credito__label">Credito disponible</span>
+        <span class="banner-credito__monto">${clp(cliente.credito)}</span>
+      </div>` : `<div class="sheet__item-detalle" style="margin-top:8px">Sin linea de credito.</div>`}
+
+      <div class="sheet__subtitulo">Direcciones guardadas</div>
+      <div id="lista-direcciones-cliente"></div>
+      <div class="sheet__nueva-direccion" id="form-nueva-direccion-cliente" style="display:none">
+        <input class="sheet__input" id="fc-dir-calle" type="text" placeholder="Calle y numero" />
+        <input class="sheet__input" id="fc-dir-comuna" type="text" placeholder="Comuna" style="margin-top:8px" />
+        <button class="btn-cobrar" id="fc-dir-guardar" style="width:100%;margin-top:8px">Guardar direccion</button>
+      </div>
+      <button class="btn-outline" id="fc-dir-agregar" style="margin-top:8px;height:auto;padding:12px">+ Agregar direccion</button>
+
+      <button class="btn-cobrar" id="fc-usar-cliente" style="width:100%;margin-top:16px">Usar este cliente</button>`,
+      (root) => {
+        const listaDir = root.querySelector("#lista-direcciones-cliente");
+        const pintarDirecciones = () => {
+          listaDir.innerHTML = cliente.direcciones.length
+            ? cliente.direcciones
+                .map(
+                  (d) => `
+              <div class="radio-row" style="cursor:default">
+                <div>
+                  <div>${esc(d.direccion)}</div>
+                  <div class="sheet__item-detalle">${esc(d.comuna)}</div>
+                </div>
+              </div>`,
+                )
+                .join("")
+            : `<div class="sheet__item-detalle" style="padding:8px 0">Sin direcciones guardadas.</div>`;
+        };
+        pintarDirecciones();
+
+        root.querySelector("#fc-dir-agregar").addEventListener("click", () => {
+          root.querySelector("#form-nueva-direccion-cliente").style.display = "block";
+        });
+        root.querySelector("#fc-dir-guardar").addEventListener("click", () => {
+          const calle = root.querySelector("#fc-dir-calle").value.trim();
+          const comuna = root.querySelector("#fc-dir-comuna").value.trim();
+          if (!calle || !comuna) {
+            mostrarToast("Completa calle y comuna");
+            return;
+          }
+          cliente.direcciones.push({ id: `cd-${Date.now()}`, direccion: calle, comuna });
+          guardarEstado();
+          root.querySelector("#form-nueva-direccion-cliente").style.display = "none";
+          root.querySelector("#fc-dir-calle").value = "";
+          root.querySelector("#fc-dir-comuna").value = "";
+          pintarDirecciones();
+          mostrarToast("Direccion agregada");
+        });
+        root.querySelector("#fc-usar-cliente").addEventListener("click", () => crearCarroNuevo(cliente));
+      },
+    );
+  }
+
   input.addEventListener("input", render);
-  document.getElementById("fab-nuevo-carro").addEventListener("click", () => {
-    window.location.href = "carrito.html?id=nuevo";
-  });
+  document.getElementById("fab-nuevo-carro").addEventListener("click", abrirSheetNuevoCarro);
   const dropdown = document.getElementById("dropdown-menu-lista");
   document.getElementById("btn-menu-lista").addEventListener("click", (e) => {
     e.stopPropagation();
@@ -414,15 +592,74 @@ function initCarritoDetalle() {
     // fecha + horario + nombre de quien recibe), todo eso quedaba invisible
     // detras del corte. Solo la direccion (envio-texto) se trunca, el resto
     // (envio-detalle) nunca.
-    const detalleTipo = l.tipoDespacho === "express"
-      ? `Express (+${clp(COSTO_DESPACHO_EXPRESS)}) · ${esc(l.rangoHorarioDespacho || "")}`
+    // Tipo y fecha+hora en el bloque de arriba (junto a la direccion) —
+    // juntos como antes ("Regular (+$3.990) · Jue 17 sep · 10:00 - 13:00")
+    // se cortaba a la mitad de la hora en tarjetas angostas. El costo del
+    // despacho de ESTA linea se muestra aparte, pegado al precio (fila2):
+    // cada producto puede tener fecha/horario distinto (regular vs express),
+    // asi que cada uno puede tener un recargo de despacho distinto — mejor
+    // verlo junto al total de esa linea, no en el bloque de texto de arriba.
+    const tipoLinea = l.tipoDespacho === "express" ? "Express" : l.tipoDespacho === "regular" ? "Regular" : "";
+    const costoDespachoLinea = l.tipoDespacho === "express" ? COSTO_DESPACHO_EXPRESS : l.tipoDespacho === "regular" ? COSTO_DESPACHO_REGULAR : 0;
+    // Fecha sin el dia de semana ("17 sep" no "Jue 17 sep") y horario sin
+    // espacios alrededor del guion ("10:00-13:00") — con el prefijo tipo/costo
+    // ya afuera, esto es lo minimo para que entre en una sola linea incluso
+    // en la tarjeta angosta (compite con icono + badge OFERTA + tacho).
+    const horarioCorto = (l.rangoHorarioDespacho || "").replace(" - ", "-");
+    const fechaHoraLinea = l.tipoDespacho === "express"
+      ? esc(horarioCorto)
       : l.tipoDespacho === "regular"
-        ? `Regular (+${clp(COSTO_DESPACHO_REGULAR)}) · ${esc(labelFechaDespacho(l.fechaDespacho))}${l.rangoHorarioDespacho ? " · " + esc(l.rangoHorarioDespacho) : ""}`
+        ? `${esc(labelFechaDespacho(l.fechaDespacho).replace(/^\S+\s/, ""))}${horarioCorto ? " · " + esc(horarioCorto) : ""}`
         : "";
     const retiroTexto = !l.esDespacho && !esKit && l.fechaRetiro
       ? `Retira: ${esc(labelFechaDespacho(l.fechaRetiro))} · ${esc(l.horarioRetiro || "")}`
       : null;
     const nombreReceptorLinea = l.nombreReceptor ? `Recibe: ${esc(l.nombreReceptor)}` : "";
+
+    // l.esDespacho es la UNICA fuente de verdad de si esta linea va con
+    // despacho o no — antes se usaba "!direccion" (que tambien es true
+    // cuando esDespacho=true pero todavia no se eligio direccion) como señal
+    // de "no es despacho", y eso abria el link de retiro programado en una
+    // linea que en realidad estaba en despacho: quedaba con esDespacho=true
+    // pero campos de retiro seteados, sin mostrar nada. Bug real reportado
+    // (Set Sabanas 2 Plazas), no especifico de un producto — cualquier
+    // linea que quedara con direccion sin elegir caia en el mismo caso.
+    let bloqueEntrega = "";
+    if (l.esDespacho) {
+      if (direccion) {
+        bloqueEntrega = `
+        <div class="tarjeta-linea__envio">
+          <div class="tarjeta-linea__envio-info">
+            <div class="tarjeta-linea__envio-texto">Envio a: ${esc(direccion.direccion)}</div>
+            ${tipoLinea ? `<div class="tarjeta-linea__envio-detalle">${tipoLinea}</div>` : ""}
+            ${fechaHoraLinea ? `<div class="tarjeta-linea__envio-detalle">${fechaHoraLinea}</div>` : ""}
+            ${nombreReceptorLinea ? `<div class="tarjeta-linea__envio-detalle">${nombreReceptorLinea}</div>` : ""}
+          </div>
+          ${editable ? `<button class="link-inline" data-accion="cambiar-direccion">Cambiar</button>` : ""}
+        </div>`;
+      } else if (editable) {
+        bloqueEntrega = `
+        <div class="tarjeta-linea__envio">
+          <div class="tarjeta-linea__envio-info">
+            <div class="tarjeta-linea__envio-texto">Falta elegir direccion de despacho</div>
+          </div>
+          <button class="link-inline" data-accion="cambiar-direccion">Elegir</button>
+        </div>`;
+      }
+    } else if (!esKit) {
+      if (retiroTexto) {
+        bloqueEntrega = `
+        <div class="tarjeta-linea__envio">
+          <div class="tarjeta-linea__envio-info">
+            <div class="tarjeta-linea__envio-texto">${retiroTexto}</div>
+            ${nombreReceptorLinea ? `<div class="tarjeta-linea__envio-detalle">${nombreReceptorLinea}</div>` : ""}
+          </div>
+          ${editable ? `<button class="link-inline" data-accion="cambiar-retiro">Cambiar</button>` : ""}
+        </div>`;
+      } else if (editable) {
+        bloqueEntrega = `<button class="link-inline" data-accion="cambiar-retiro" style="margin-top:2px">+ Retiro programado</button>`;
+      }
+    }
 
     return `
       <div class="tarjeta-linea ${l.esDespacho ? "tarjeta-linea--despacho" : ""}" data-index="${idx}">
@@ -432,25 +669,7 @@ function initCarritoDetalle() {
             <div class="tarjeta-linea__nombre">${esc(art.nombre)}</div>
             ${subtituloExtra}
             ${l.tiendaOrigenNombre ? `<div class="tarjeta-linea__variante">Desde: ${esc(l.tiendaOrigenNombre)}</div>` : ""}
-            ${direccion ? `
-            <div class="tarjeta-linea__envio">
-              <div class="tarjeta-linea__envio-info">
-                <div class="tarjeta-linea__envio-texto">Envio a: ${esc(direccion.direccion)}</div>
-                ${detalleTipo ? `<div class="tarjeta-linea__envio-detalle">${detalleTipo}</div>` : ""}
-                ${nombreReceptorLinea ? `<div class="tarjeta-linea__envio-detalle">${nombreReceptorLinea}</div>` : ""}
-              </div>
-              ${editable ? `<button class="link-inline" data-accion="cambiar-direccion">Cambiar</button>` : ""}
-            </div>` : ""}
-            ${!direccion && !esKit && retiroTexto ? `
-            <div class="tarjeta-linea__envio">
-              <div class="tarjeta-linea__envio-info">
-                <div class="tarjeta-linea__envio-texto">${retiroTexto}</div>
-                ${nombreReceptorLinea ? `<div class="tarjeta-linea__envio-detalle">${nombreReceptorLinea}</div>` : ""}
-              </div>
-              ${editable ? `<button class="link-inline" data-accion="cambiar-retiro">Cambiar</button>` : ""}
-            </div>` : ""}
-            ${!direccion && !esKit && !retiroTexto && editable ? `
-            <button class="link-inline" data-accion="cambiar-retiro" style="margin-top:2px">+ Retiro programado</button>` : ""}
+            ${bloqueEntrega}
           </div>
           ${art.precioOferta != null && !promo ? `<span class="chip-oferta">OFERTA</span>` : ""}
           ${promo ? `<span class="chip-oferta">DESC.</span>` : ""}
@@ -460,6 +679,7 @@ function initCarritoDetalle() {
           <div class="tarjeta-linea__precio">${precioHtml}</div>
           <div class="tarjeta-linea__totales">
             <span class="label">Total</span><span class="tarjeta-linea__subtotal ${tachado != null ? "tarjeta-linea__subtotal--oferta" : ""}">${clp(subtotal)}</span>
+            ${costoDespachoLinea > 0 ? `<div class="tarjeta-linea__despacho-costo">+ ${clp(costoDespachoLinea)} despacho</div>` : ""}
           </div>
         </div>
         <div class="tarjeta-linea__fila3">
@@ -707,7 +927,7 @@ function initCarritoDetalle() {
             btn.innerHTML = ICONS.check;
           });
         });
-        root.querySelector("#reco-listo").addEventListener("click", () => mostrarListaAgregarProducto());
+        root.querySelector("#reco-listo").addEventListener("click", () => cerrarSheet());
       },
     );
   }
@@ -999,6 +1219,12 @@ function initCarritoDetalle() {
           linea.fechaDespacho = tipoSel === "regular" ? fechaSel : null;
           linea.rangoHorarioDespacho = horarioSel;
           linea.nombreReceptor = inputReceptor.value.trim();
+          // Limpia campos de retiro programado — una linea no puede quedar
+          // con esDespacho=true Y datos de retiro a la vez (bug real: eso
+          // pasaba si se abria "Retiro programado" con esDespacho todavia
+          // en true por un despacho sin terminar).
+          delete linea.fechaRetiro;
+          delete linea.horarioRetiro;
           cerrarSheet();
           renderLineas();
           renderFooter();
@@ -1053,6 +1279,16 @@ function initCarritoDetalle() {
         actualizarConfirmar();
 
         btnConfirmar.addEventListener("click", () => {
+          // Retiro programado es SIEMPRE modalidad "no despacho" — si esta
+          // linea venia con esDespacho=true a medio configurar (ej: llego
+          // aca por el link "+ Retiro programado" que ahora solo aparece
+          // sin despacho, pero por las dudas), lo fuerza a false y limpia
+          // los campos de despacho para no dejar estado contradictorio.
+          linea.esDespacho = false;
+          delete linea.direccionId;
+          delete linea.tipoDespacho;
+          delete linea.fechaDespacho;
+          delete linea.rangoHorarioDespacho;
           linea.fechaRetiro = fechaSel;
           linea.horarioRetiro = horarioSel;
           linea.nombreReceptor = inputReceptor.value.trim();
@@ -1139,7 +1375,10 @@ function initCarritoDetalle() {
   function abrirSheetMultitienda(idx) {
     const linea = carro.lineas[idx];
     const art = catalogoPorSku(linea.sku);
-    let tiendaSel = null;
+    // Primera tienda de la red preseleccionada — pedido explicito: no obligar
+    // a un click extra para elegir tienda cuando la mayoria de las veces da
+    // lo mismo cual, ya viene con stock disponible listado.
+    let tiendaSel = DATA.tiendasRed[0]?.id || null;
     let modalidadSel = "retiro";
     abrirSheet(
       `
@@ -1163,12 +1402,13 @@ function initCarritoDetalle() {
           .map(
             (t) => `
           <div class="radio-row" data-id="${t.id}">
-            <span class="radio-dot"></span>
+            <span class="radio-dot ${tiendaSel === t.id ? "radio-dot--activo" : ""}"></span>
             <div style="flex:1">${esc(t.nombre)}</div>
             <span class="sheet__item-detalle">Stock: ${t.stock}</span>
           </div>`,
           )
           .join("");
+        btnConfirmar.disabled = !tiendaSel;
         listaModalidad.innerHTML = `
           <div class="radio-row" data-modalidad="retiro"><span class="radio-dot radio-dot--activo"></span><div>Retiro en otra tienda</div></div>
           <div class="radio-row" data-modalidad="despacho"><span class="radio-dot"></span><div>Despacho a domicilio</div></div>`;
@@ -1192,18 +1432,17 @@ function initCarritoDetalle() {
           const tienda = DATA.tiendasRed.find((t) => t.id === tiendaSel);
           linea.cantidad += 1;
           linea.tiendaOrigenNombre = tienda.nombre;
-          if (modalidadSel === "despacho") {
-            linea.esDespacho = true;
-            if (!linea.direccionId) linea.direccionId = DATA.direcciones[0].id;
-            if (!linea.tipoDespacho) {
-              linea.tipoDespacho = "regular";
-              linea.fechaDespacho = fechasDespachoRegular()[0].value;
-            }
-          }
           cerrarSheet();
           renderLineas();
           renderFooter();
           mostrarToast(`Solicitado desde ${tienda.nombre}`);
+          if (modalidadSel === "despacho") {
+            linea.esDespacho = true;
+            // Abre directo el sheet de fecha/horario en vez de dejarlo con
+            // un default silencioso sin horario — pedido explicito: despues
+            // de agregarlo, mostrar las opciones de fecha y hora de envio.
+            abrirSheetDireccion(idx);
+          }
         });
       },
     );
