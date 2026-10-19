@@ -1060,6 +1060,13 @@ function initCarritoDetalle() {
             })
             .join("");
 
+          lista.querySelectorAll(".sheet__item-info").forEach((info) => {
+            const sku = info.closest(".sheet__item").dataset.sku;
+            if (catalogoPorSku(sku).tipo === "giftcard") return;
+            info.style.cursor = "pointer";
+            info.addEventListener("click", () => (window.location.href = `producto.html?sku=${sku}&carro=${carro.id}`));
+          });
+
           lista.querySelectorAll('[data-accion="agregar"]').forEach((btn) => {
             btn.addEventListener("click", () => {
               const sku = btn.closest(".sheet__item").dataset.sku;
@@ -1587,6 +1594,7 @@ function initCarritoDetalle() {
   renderFooter();
 
   document.getElementById("btn-volver").addEventListener("click", () => (window.location.href = "index.html"));
+  document.getElementById("btn-catalogo").addEventListener("click", () => (window.location.href = `catalogo.html?carro=${carro.id}`));
 
   document.getElementById("btn-cobrar").addEventListener("click", () => {
     window.location.href = `cobro.html?id=${carro.id}`;
@@ -2081,8 +2089,198 @@ function initDocumento() {
   }
 }
 
+// ── Pantalla: catalogo (grilla de productos) ──────────────────────────
+// `?carro=ID` opcional: se arrastra a la ficha para poder agregar desde ahi.
+function initCatalogo() {
+  const grid = document.getElementById("catalogo-grid");
+  if (!grid) return;
+  const carroId = qs("carro");
+  document.getElementById("subtitulo-catalogo").textContent = DATA.tienda.nombre;
+  document.getElementById("btn-volver").addEventListener("click", () => {
+    window.location.href = carroId ? `carrito.html?id=${carroId}` : "index.html";
+  });
+
+  const input = document.getElementById("buscar-catalogo");
+  const render = () => {
+    const q = input.value.trim().toLowerCase();
+    // Giftcard fuera: su monto se define en el dialogo del carrito, no tiene ficha.
+    const items = DATA.catalogo.filter((a) => a.tipo !== "giftcard" && (!q || a.nombre.toLowerCase().includes(q) || a.sku.toLowerCase().includes(q)));
+    grid.innerHTML = items.length
+      ? items.map((a) => {
+          const dcto = a.precioOferta != null ? Math.round((1 - a.precioOferta / a.precio) * 100) : 0;
+          const portada = a.imagenes?.[0]
+            ? `<img src="${esc(a.imagenes[0])}" alt="" loading="lazy" onerror="this.replaceWith('${a.icono}')" />`
+            : a.icono;
+          return `
+          <a class="catalogo-card" href="producto.html?sku=${a.sku}${carroId ? `&carro=${carroId}` : ""}">
+            <div class="catalogo-card__img">${portada}${dcto ? `<span class="chip-oferta catalogo-card__dcto">-${dcto}%</span>` : ""}</div>
+            <div class="catalogo-card__nombre">${esc(a.nombre)}</div>
+            <div class="catalogo-card__precio">${clp(a.precioOferta ?? a.precio)}${a.precioOferta != null ? ` <s>${clp(a.precio)}</s>` : ""}</div>
+            ${a.variantes ? `<div class="catalogo-card__colores">${a.variantes.map((v) => `<span class="swatch swatch--sm" style="background:${colorHex(v.color)}"></span>`).join("")}</div>` : ""}
+          </a>`;
+        }).join("")
+      : `<div class="sheet__item-detalle">Sin resultados para "${esc(q)}".</div>`;
+  };
+  input.addEventListener("input", render);
+  render();
+}
+
+// ── Pantalla: ficha de producto (tipo e-commerce) ─────────────────────
+function initProducto() {
+  const cont = document.getElementById("ficha-producto");
+  if (!cont) return;
+  const art = catalogoPorSku(qs("sku")) || DATA.catalogo[0];
+  const carro = DATA.carros.find((c) => c.id === qs("carro"));
+  const puedeAgregar = carro && carro.estado === "ABIERTO" && art.tipo !== "giftcard";
+  let colorSel = art.variantes ? (art.variantes.find((v) => v.stock > 0) || art.variantes[0]).color : null;
+  let cantidad = 1;
+
+  document.getElementById("subtitulo-producto").textContent = carro ? `${carro.numero} · ${carro.cliente}` : DATA.tienda.nombre;
+  document.getElementById("btn-volver").addEventListener("click", () => {
+    if (document.referrer) history.back();
+    else window.location.href = carro ? `carrito.html?id=${carro.id}` : "catalogo.html";
+  });
+
+  function disponible() {
+    const base = art.variantes ? art.variantes.find((v) => v.color === colorSel).stock : art.stock;
+    const enCarro = (carro?.lineas || [])
+      .filter((l) => l.sku === art.sku && (l.colorSeleccionado || null) === colorSel)
+      .reduce((n, l) => n + l.cantidad, 0);
+    return Math.max(0, base - enCarro);
+  }
+
+  const slides = art.imagenes?.length
+    ? art.imagenes.map((src) => `<div class="carrusel__slide"><img src="${esc(src)}" alt="${esc(art.nombre)}" onerror="this.replaceWith('${art.icono}')" /></div>`)
+    : [`<div class="carrusel__slide">${art.icono}</div>`];
+  const dcto = art.precioOferta != null ? Math.round((1 - art.precioOferta / art.precio) * 100) : 0;
+
+  cont.innerHTML = `
+    <div class="carrusel">
+      <div class="carrusel__pista" id="carrusel-pista">${slides.join("")}</div>
+      ${slides.length > 1 ? `
+        <button class="carrusel__flecha carrusel__flecha--izq" data-dir="-1" aria-label="Anterior">${ICONS.back}</button>
+        <button class="carrusel__flecha carrusel__flecha--der" data-dir="1" aria-label="Siguiente">${ICONS.back}</button>
+        <div class="carrusel__contador" id="carrusel-contador">1 / ${slides.length}</div>` : ""}
+      ${dcto ? `<span class="chip-oferta carrusel__dcto">-${dcto}%</span>` : ""}
+    </div>
+    ${slides.length > 1 ? `<div class="carrusel__miniaturas">${art.imagenes.map((src, i) => `<button class="carrusel__mini${i === 0 ? " carrusel__mini--sel" : ""}" data-i="${i}"><img src="${esc(src)}" alt="" onerror="this.replaceWith('${art.icono}')" /></button>`).join("")}</div>` : ""}
+
+    <div class="ficha__bloque">
+      <div class="ficha__meta">${art.marca ? `${esc(art.marca)} · ` : ""}SKU ${art.sku}</div>
+      <h1 class="ficha__nombre">${esc(art.nombre)}</h1>
+      ${art.variante ? `<div class="ficha__meta">${esc(art.variante)}</div>` : ""}
+      <div class="ficha__precio">${clp(art.precioOferta ?? art.precio)}${art.precioOferta != null ? ` <s>${clp(art.precio)}</s>` : ""}</div>
+      ${art.unidadMedida ? `<span class="tarjeta-linea__chip-um">${esc(art.unidadMedida)}</span>` : ""}
+      ${(art.promociones || []).map((p) => `<div class="ficha__promo">${esc(p.descripcion)}</div>`).join("")}
+      <div class="ficha__stock" id="ficha-stock"></div>
+    </div>
+
+    ${art.variantes ? `
+    <div class="ficha__bloque">
+      <div class="ficha__titulo">Color: <span id="ficha-color-nombre">${esc(colorSel)}</span></div>
+      <div class="ficha__colores">${art.variantes.map((v) => `
+        <button class="ficha__color${v.stock <= 0 ? " ficha__color--agotado" : ""}" data-color="${esc(v.color)}" ${v.stock <= 0 ? "disabled" : ""} aria-label="${esc(v.color)}">
+          <span class="swatch" style="background:${colorHex(v.color)}"></span>
+        </button>`).join("")}
+      </div>
+    </div>` : ""}
+
+    ${art.tipo === "kit" ? `
+    <div class="ficha__bloque">
+      <div class="ficha__titulo">Incluye</div>
+      ${art.componentes.map((s) => catalogoPorSku(s)).map((c) => `<div class="ficha__fila"><span>${c.icono} ${esc(c.nombre)}</span><span>${clp(c.precioOferta ?? c.precio)}</span></div>`).join("")}
+    </div>` : ""}
+
+    ${art.descripcion ? `
+    <div class="ficha__bloque">
+      <div class="ficha__titulo">Descripcion</div>
+      <p class="ficha__texto">${esc(art.descripcion)}</p>
+    </div>` : ""}
+
+    ${art.medidas ? `
+    <div class="ficha__bloque">
+      <div class="ficha__titulo">Medidas</div>
+      ${Object.entries(art.medidas).map(([k, v]) => `<div class="ficha__fila"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("")}
+    </div>` : ""}
+
+    ${art.caracteristicas ? `
+    <div class="ficha__bloque">
+      <div class="ficha__titulo">Caracteristicas</div>
+      <ul class="ficha__lista">${art.caracteristicas.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+    </div>` : ""}
+
+    ${art.recomienda ? `
+    <div class="ficha__bloque">
+      <div class="ficha__titulo">Combina con</div>
+      <div class="ficha__reco">${art.recomienda.map((s) => catalogoPorSku(s)).map((r) => `
+        <a class="catalogo-card" href="producto.html?sku=${r.sku}${carro ? `&carro=${carro.id}` : ""}">
+          <div class="catalogo-card__img">${r.icono}</div>
+          <div class="catalogo-card__nombre">${esc(r.nombre)}</div>
+          <div class="catalogo-card__precio">${clp(r.precioOferta ?? r.precio)}</div>
+        </a>`).join("")}
+      </div>
+    </div>` : ""}`;
+
+  // Carrusel: scroll-snap nativo hace el swipe; JS solo sincroniza contador,
+  // miniaturas y flechas.
+  const pista = document.getElementById("carrusel-pista");
+  const irA = (i) => pista.scrollTo({ left: i * pista.clientWidth, behavior: "smooth" });
+  const actual = () => Math.round(pista.scrollLeft / pista.clientWidth);
+  pista.addEventListener("scroll", () => {
+    const i = actual();
+    const contador = document.getElementById("carrusel-contador");
+    if (contador) contador.textContent = `${i + 1} / ${slides.length}`;
+    cont.querySelectorAll(".carrusel__mini").forEach((m, j) => m.classList.toggle("carrusel__mini--sel", i === j));
+  });
+  cont.querySelectorAll(".carrusel__flecha").forEach((b) =>
+    b.addEventListener("click", () => irA((actual() + Number(b.dataset.dir) + slides.length) % slides.length)));
+  cont.querySelectorAll(".carrusel__mini").forEach((b) => b.addEventListener("click", () => irA(Number(b.dataset.i))));
+
+  cont.querySelectorAll(".ficha__color").forEach((b) =>
+    b.addEventListener("click", () => {
+      colorSel = b.dataset.color;
+      cantidad = 1;
+      render();
+    }));
+
+  const footer = document.getElementById("footer-ficha");
+  function render() {
+    const disp = disponible();
+    document.getElementById("ficha-stock").innerHTML = art.tipo === "giftcard"
+      ? "Monto a definir al agregarla desde el carrito"
+      : disp > 0 ? `<span class="ficha__stock--ok">Stock disponible: ${disp}</span>` : `<span class="ficha__stock--sin">Sin stock local${colorSel ? ` en ${esc(colorSel)}` : ""}</span>`;
+    const nombreColor = document.getElementById("ficha-color-nombre");
+    if (nombreColor) nombreColor.textContent = colorSel;
+    cont.querySelectorAll(".ficha__color").forEach((b) => b.classList.toggle("ficha__color--sel", b.dataset.color === colorSel));
+
+    if (!puedeAgregar) return;
+    footer.style.display = "";
+    footer.innerHTML = `
+      <div class="footer-total__resumen">
+        <div class="ficha__stepper">
+          <button class="icon-btn" id="ficha-menos" ${cantidad <= 1 ? "disabled" : ""} aria-label="Menos">${ICONS.minus}</button>
+          <span>${cantidad}</span>
+          <button class="icon-btn" id="ficha-mas" ${cantidad >= disp ? "disabled" : ""} aria-label="Mas">${ICONS.plus}</button>
+        </div>
+        <button class="btn-cobrar" id="ficha-agregar" ${disp <= 0 ? "disabled" : ""}>Agregar · ${clp((art.precioOferta ?? art.precio) * cantidad)}</button>
+      </div>`;
+    footer.querySelector("#ficha-menos").addEventListener("click", () => { cantidad--; render(); });
+    footer.querySelector("#ficha-mas").addEventListener("click", () => { cantidad++; render(); });
+    footer.querySelector("#ficha-agregar").addEventListener("click", () => {
+      const existente = carro.lineas.find((l) => l.sku === art.sku && (l.colorSeleccionado || null) === colorSel);
+      if (existente) existente.cantidad += cantidad;
+      else carro.lineas.push({ sku: art.sku, cantidad, esDespacho: false, colorSeleccionado: colorSel });
+      guardarEstado();
+      window.location.href = `carrito.html?id=${carro.id}`;
+    });
+  }
+  render();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initListaCarros();
+  initCatalogo();
+  initProducto();
   initCarritoDetalle();
   initCobro();
   initDocumento();

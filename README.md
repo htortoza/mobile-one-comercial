@@ -24,6 +24,12 @@ Abrir `http://localhost:8080/index.html`.
 - `cobro.html` — medios de pago (Efectivo/Tarjeta/Giftcard), calca
   `PagoScreen.kt` de la app real
 - `documento.html` — boleta/factura tras el cobro, calca `DocumentoScreen.kt`
+- `catalogo.html` — grilla de productos (buscador, foto/emoji, precio, % dcto,
+  colores). Acceso: botón "Catalogo" del carrito o menú ⋮ de la lista.
+- `producto.html?sku=X&carro=ID` — ficha tipo e-commerce: carrusel de fotos
+  (swipe/flechas/miniaturas), precio y oferta, stock, colores, descripción,
+  medidas, características, "Combina con", y "Agregar" con cantidad (si viene
+  `carro` abierto). También se abre tocando un producto en el buscador del carrito.
 - `style.css` — todo el estilo. Colores/radios/tipografía calcados de
   `app/src/main/java/.../core/ui/theme/Color.kt`, `Dimens.kt`, `Shape.kt` de la
   app real. Desktop: teléfono centrado con marco+notch sobre fondo oscuro.
@@ -109,6 +115,10 @@ Pantalla documento (`documento.html`), calca `DocumentoScreen.kt`:
   `data.js` y reflejarlo en `data.json`). Campos: `sku`, `nombre`,
   `variante` (subtítulo estático opcional), `precio`, `precioOferta`,
   `unidadMedida`, `stock`, `icono` (emoji).
+- **Ficha de producto**: campos opcionales en el catálogo — `imagenes`
+  (URLs; sin ellas o sin internet se usa el emoji), `marca`, `descripcion`,
+  `medidas` (`{ "Largo": "190 cm", ... }`), `caracteristicas` (lista).
+  Ejemplo completo: `CAM-9010` (Cama Box American).
 - **Agregar variantes de color a un producto**: agregar
   `variantes: [{ color, stock }, ...]` a su entrada del catálogo. El
   selector de color se activa solo si existe ese campo.

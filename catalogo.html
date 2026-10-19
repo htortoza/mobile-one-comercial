@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mobile One POS — Catalogo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="app-screen">
+      <div class="topbar">
+        <button class="icon-btn" id="btn-volver" aria-label="Volver"></button>
+        <div class="topbar__titulos">
+          <div class="topbar__titulo">Catalogo</div>
+          <div class="topbar__subtitulo" id="subtitulo-catalogo"></div>
+        </div>
+      </div>
+
+      <div class="buscador">
+        <span id="icono-buscar"></span>
+        <input id="buscar-catalogo" type="text" placeholder="Nombre o SKU" />
+      </div>
+
+      <div class="contenido">
+        <div class="catalogo-grid" id="catalogo-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById("btn-volver").innerHTML = ICONS.back;
+    document.getElementById("icono-buscar").outerHTML = ICONS.search;
+  </script>
+</body>
+</html>

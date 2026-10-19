@@ -55,7 +55,26 @@ window.MOCK_DATA = {
     { sku: "SAB-5120", nombre: "Set Sabanas 2 Plazas", variante: "Beige", precio: 21990, precioOferta: 16990, unidadMedida: null, stock: 0, icono: "🛏️",
       recomienda: ["HOG-2001", "HOG-2002", "HOG-2003", "HOG-2004"] },
     { sku: "CAM-9010", nombre: "Cama Box American", variante: "2 plazas", precio: 249990, precioOferta: 219990, unidadMedida: null, stock: 3, icono: "🛏️",
-      recomienda: ["HOG-2001", "HOG-2002", "HOG-2003"] },
+      variantes: [
+        { color: "Gris", stock: 3 },
+        { color: "Beige", stock: 2 },
+        { color: "Negro", stock: 0 },
+      ],
+      recomienda: ["HOG-2001", "HOG-2002", "HOG-2003"],
+      // Ficha de producto (producto.html). Todos opcionales: sin `imagenes`
+      // la ficha usa el emoji `icono`; sin el resto, esas secciones no salen.
+      // ponytail: fotos de Unsplash por URL — sin internet cae al emoji.
+      marca: "Rosen",
+      imagenes: [
+        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&q=70",
+        "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=800&q=70",
+        "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=70",
+        "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=70",
+        "https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800&q=70",
+      ],
+      descripcion: "Cama box americana con colchon de resortes pocket independientes y respaldo tapizado. Firmeza media, ideal para quienes duermen de lado o de espalda. Base con patas de madera y tela antiacaros.",
+      medidas: { "Largo": "190 cm", "Ancho": "140 cm", "Alto total": "62 cm", "Alto colchon": "28 cm", "Peso": "48 kg" },
+      caracteristicas: ["Resortes pocket independientes", "Firmeza media", "Tela antiacaros", "Respaldo tapizado incluido", "Garantia 5 anos"] },
     { sku: "MOC-6011", nombre: "Mochila Notebook 15\"", variante: "Negro", precio: 27990, precioOferta: null, unidadMedida: null, stock: 6, icono: "🎒",
       recomienda: ["ACC-1009", "ACC-1010", "ACC-1011", "ACC-1012"] },
     { sku: "TAZ-7200", nombre: "Taza Termica Acero", variante: null, precio: 6990, precioOferta: null, unidadMedida: null, stock: 20, icono: "☕" },
