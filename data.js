@@ -14,7 +14,8 @@ window.MOCK_DATA = {
     { rut: "22.222.222-2", nombre: "Comercial Rios SpA",
       direcciones: [{ id: "cd2", direccion: "Av. Apoquindo 3200, of. 12", comuna: "Las Condes" }] },
     { rut: "33.333.333-3", nombre: "Pedro Soto", direcciones: [] },
-    { rut: "44.444.444-4", nombre: "Javiera Munoz", direcciones: [] },
+    { rut: "44.444.444-4", nombre: "Javiera Munoz",
+      direcciones: [{ id: "cd4", direccion: "Av. Libertad 1150, depto 802", comuna: "Vina del Mar" }] },
     // Empresa con linea de credito propia (ver cobro.html) — el resto de
     // clientes/empresas no tiene campo `credito`, eso es lo que gatea si se
     // muestra el medio de pago "Credito" en el cobro.
@@ -32,6 +33,14 @@ window.MOCK_DATA = {
     { id: "t2", nombre: "Tienda Mall Plaza Oeste", stock: 2 },
     { id: "t3", nombre: "Centro de Distribucion", stock: 12 },
   ],
+
+  // Promesa de entrega en la ficha de producto (producto.html), en dias
+  // habiles. Cliente con direccion conocida = prioridad (plazo corto y
+  // exacto); cliente generico = rango conservador.
+  promesaEntrega: {
+    generico: { rm: 2, regiones: 4 },
+    cliente: { rm: 1, regiones: 3 },
+  },
 
   promocionesCarrito: [
     { id: "pc1", descripcion: "10% dcto en el total del carrito", porcentaje: 0.10 },
@@ -58,6 +67,7 @@ window.MOCK_DATA = {
       variantes: [
         { color: "Gris", stock: 3 },
         { color: "Beige", stock: 2 },
+        { color: "Verde", stock: 2 },
         { color: "Negro", stock: 0 },
       ],
       recomienda: ["HOG-2001", "HOG-2002", "HOG-2003"],

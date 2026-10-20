@@ -2125,6 +2125,55 @@ function initCatalogo() {
   render();
 }
 
+// ── Promesa de entrega (ficha de producto) ────────────────────────────
+// ponytail: region por comuna con lista fija de la RM — las direcciones se
+// cargan solo con calle + comuna, sin campo region.
+const COMUNAS_RM = ["santiago", "providencia", "las condes", "vitacura", "lo barnechea", "nunoa", "la reina",
+  "penalolen", "macul", "san miguel", "san joaquin", "la florida", "puente alto", "maipu", "cerrillos",
+  "estacion central", "quinta normal", "recoleta", "independencia", "conchali", "huechuraba", "quilicura",
+  "renca", "cerro navia", "lo prado", "pudahuel", "la cisterna", "el bosque", "la granja", "la pintana",
+  "lo espejo", "pedro aguirre cerda", "san ramon", "san bernardo", "colina", "lampa", "buin", "padre hurtado",
+  "penaflor", "talagante", "melipilla", "pirque", "san jose de maipo", "calera de tango"];
+function esComunaRM(comuna) {
+  const n = String(comuna || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return COMUNAS_RM.includes(n);
+}
+function sumarDiasHabiles(n, desde = new Date()) {
+  const d = new Date(desde);
+  while (n > 0) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) n--;
+  }
+  return d;
+}
+function labelEntrega(dias) {
+  const d = sumarDiasHabiles(dias);
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  if (d.toDateString() === manana.toDateString()) return "manana";
+  return `el ${DIAS_SEMANA[d.getDay()].toLowerCase()} ${d.getDate()} ${MESES_ANIO[d.getMonth()]}`;
+}
+const horas = (dias) => (dias <= 2 ? `${dias * 24} hrs` : `${dias} dias habiles`);
+// Devuelve las filas a mostrar: [{ destacado, titulo, detalle }]
+function promesaEntrega(cliente) {
+  const P = DATA.promesaEntrega;
+  const dir = cliente?.direcciones?.[0];
+  if (!dir) {
+    return [
+      { titulo: `Entrega en ${horas(P.generico.rm)} en Region Metropolitana`, detalle: `Llega ${labelEntrega(P.generico.rm)}` },
+      { titulo: `Entrega en ${P.generico.regiones} dias habiles a regiones`, detalle: `Llega ${labelEntrega(P.generico.regiones)}` },
+    ];
+  }
+  const rm = esComunaRM(dir.comuna);
+  const dias = rm ? P.cliente.rm : P.cliente.regiones;
+  const cuando = labelEntrega(dias);
+  return [{
+    destacado: true,
+    titulo: cuando === "manana" ? "Disponible para entregar manana!" : `Llega ${cuando}`,
+    detalle: `Entrega prioritaria en ${horas(dias)} a ${dir.comuna}${rm ? " (RM)" : ""} · ${dir.direccion}`,
+  }];
+}
+
 // ── Pantalla: ficha de producto (tipo e-commerce) ─────────────────────
 function initProducto() {
   const cont = document.getElementById("ficha-producto");
@@ -2174,6 +2223,8 @@ function initProducto() {
       ${(art.promociones || []).map((p) => `<div class="ficha__promo">${esc(p.descripcion)}</div>`).join("")}
       <div class="ficha__stock" id="ficha-stock"></div>
     </div>
+
+    ${art.tipo !== "giftcard" ? `<div class="ficha__bloque" id="ficha-entrega"></div>` : ""}
 
     ${art.variantes ? `
     <div class="ficha__bloque">
@@ -2249,6 +2300,21 @@ function initProducto() {
     document.getElementById("ficha-stock").innerHTML = art.tipo === "giftcard"
       ? "Monto a definir al agregarla desde el carrito"
       : disp > 0 ? `<span class="ficha__stock--ok">Stock disponible: ${disp}</span>` : `<span class="ficha__stock--sin">Sin stock local${colorSel ? ` en ${esc(colorSel)}` : ""}</span>`;
+    const entrega = document.getElementById("ficha-entrega");
+    if (entrega) {
+      const cliente = carro ? clienteDelCarro(carro) : null;
+      entrega.innerHTML = `
+        <div class="ficha__titulo">Despacho</div>
+        ${disp > 0
+          ? promesaEntrega(cliente).map((f) => `
+            <div class="ficha__entrega${f.destacado ? " ficha__entrega--destacado" : ""}">
+              ${ICONS.despacho}
+              <div><div class="ficha__entrega-titulo">${esc(f.titulo)}</div><div class="ficha__entrega-detalle">${esc(f.detalle)}</div></div>
+            </div>`).join("")
+            + `<div class="ficha__entrega">${ICONS.store}<div><div class="ficha__entrega-titulo">Retiro en tienda hoy</div><div class="ficha__entrega-detalle">${esc(DATA.tienda.nombre)}</div></div></div>`
+            + (cliente?.direcciones?.length ? "" : `<div class="ficha__entrega-detalle">Asigna un cliente con direccion al carro para ver su plazo exacto.</div>`)
+          : `<div class="ficha__entrega-detalle">Sin stock local${colorSel ? ` en ${esc(colorSel)}` : ""} — el plazo depende de la tienda que lo envie (se pide desde el carrito).</div>`}`;
+    }
     const nombreColor = document.getElementById("ficha-color-nombre");
     if (nombreColor) nombreColor.textContent = colorSel;
     cont.querySelectorAll(".ficha__color").forEach((b) => b.classList.toggle("ficha__color--sel", b.dataset.color === colorSel));

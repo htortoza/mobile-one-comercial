@@ -1070,3 +1070,9 @@ a.dropdown-menu__item { display: block; text-decoration: none; color: inherit; }
 .ficha__stepper { display: flex; align-items: center; gap: 4px; font-weight: 600; }
 .ficha__stepper .icon-btn:disabled { opacity: 0.35; }
 #footer-ficha .btn-cobrar { flex: 1; width: auto; }
+.ficha__entrega { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+.ficha__entrega svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--texto-secundario); margin-top: 1px; }
+.ficha__entrega--destacado { background: var(--verde-fondo); border-radius: var(--radio-chip); padding: 10px; }
+.ficha__entrega--destacado svg, .ficha__entrega--destacado .ficha__entrega-titulo { color: var(--verde-texto); }
+.ficha__entrega-titulo { font-size: 14px; font-weight: 600; }
+.ficha__entrega-detalle { font-size: 12px; color: var(--texto-secundario); margin-top: 2px; }
